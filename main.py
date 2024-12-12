@@ -4,8 +4,10 @@ import mediapipe as mp
 from mediapipe.tasks.python import vision
 from mediapipe.tasks import python
 from PIL import Image, ImageTk
+import tensorflow as tf
 
 model_path = 'pose_landmarker_full.task'
+face_emotion_detector = "model_v6_23.h5" 
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
@@ -72,11 +74,16 @@ def start_camera():
 
 def cap_frame():
     global cap, camera_label
+    
+    #loading the model 
+    emotion_model = tf.keras.models.load_model(model_path)
+
     cap = cv.VideoCapture(0)
     
     ret, frame = cap.read()
     if ret: 
         small_frame = cv.resize(frame, (320, 240))
+        print(emotion_model.predict(small_frame))
         small_frame = cv.cvtColor(small_frame, cv.COLOR_BGR2RGB)
         img = Image.fromarray(small_frame)
         imgtk = ImageTk.PhotoImage(image=img)
