@@ -1,119 +1,72 @@
 import cv2 as cv
 from tkinter import *
-import mediapipe as mp
-from mediapipe.tasks.python import vision
-from mediapipe.tasks import python
 from PIL import Image, ImageTk
 import tensorflow as tf
 
-model_path = 'pose_landmarker_full.task'
-face_emotion_detector = "model_v6_23.h5" 
-
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
-
-options = PoseLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.IMAGE
-)
-
-landmarker = PoseLandmarker.create_from_options(options)
-
-# Initialize MediaPipe Pose
-mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, enable_segmentation=False)
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-
-
-def addmedia(frame):
-    # Convert the frame to RGB as required by MediaPipe
-    rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-    results = pose.process(rgb_frame)
-
-    if results.pose_landmarks:
-        landmarks = results.pose_landmarks.landmark  # Retrieve landmark points
-        h, w, _ = frame.shape
-
-        # Draw lines connecting landmarks
-        for connection in mp_pose.POSE_CONNECTIONS:
-            start_idx, end_idx = connection
-            start = landmarks[start_idx]
-            end = landmarks[end_idx]
-            x1, y1 = int(start.x * w), int(start.y * h)
-            x2, y2 = int(end.x * w), int(end.y * h)
-            cv.line(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-
-        # Draw circles on landmarks
-        for lm in landmarks:
-            x, y = int(lm.x * w), int(lm.y * h)
-            cv.circle(frame, (x, y), 5, (0, 0, 255), -1)
-
-    return cv.flip(frame, 1)
-
-
-def Physical_Read_frame():
-    ret, frame = cap.read()
-    if ret:
-        small_frame = cv.resize(frame, (320, 240))
-        small_frame = cv.cvtColor(small_frame, cv.COLOR_BGR2RGB)
-        processed_frame = addmedia(small_frame)
-        display_frame = cv.resize(processed_frame, (700, 500))
-        img = Image.fromarray(display_frame)
-        imgtk = ImageTk.PhotoImage(image=img)
-        camera_label.imgtk = imgtk
-        camera_label.configure(image=imgtk)
-    camera_label.after(1, Physical_Read_frame)
-
-def start_camera():
-    global cap
-    cap = cv.VideoCapture(0)
-    Physical_Read_frame()
-
-def cap_frame():
-    global cap, camera_label
+class Cam:
+    def __init__(self):
+        self.cap = cv.VideoCapture(0)
+        self.is_live = True
+        self.last_frame = None
     
-    #loading the model 
-    emotion_model = tf.keras.models.load_model(model_path)
+    def read_cam(self):
+        ret, frame = self.cap.read()
+        if ret:
+            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            self.last_frame = frame 
+            return frame
+        return None
 
-    cap = cv.VideoCapture(0)
+    def display_image(self, camera_label):
+        if not self.is_live: 
+            return 
+        frame = self.read_cam()
+        if frame is not None:
+            img = ImageTk.PhotoImage(image=Image.fromarray(frame))
+            camera_label.imgtk = img
+            camera_label.configure(image=img)
+        camera_label.after(10, self.display_image, camera_label)
     
-    ret, frame = cap.read()
-    if ret: 
-        small_frame = cv.resize(frame, (320, 240))
-        print(emotion_model.predict(small_frame))
-        small_frame = cv.cvtColor(small_frame, cv.COLOR_BGR2RGB)
-        img = Image.fromarray(small_frame)
-        imgtk = ImageTk.PhotoImage(image=img)
-        camera_label.imgtk = imgtk
-        camera_label.configure(image=imgtk)
+    def capture_frame(self):
+        print(self.last_frame)
+        if self.last_frame is not None:
+            self.is_live = False
+            img = ImageTk.PhotoImage(image=Image.fromarray(self.last_frame))
+            camera_label.imgtk = img
+            camera_label.configure(image=img)
+            print("Live feed stopped, showing the captured frame.")
+        else:
+            print("No frame available to capture!")
+
+class Model(): 
+    def __init__(self, model_path: str):
+        self.model = tf.keras.models.load_model(model_path)
+    
+    def preprocess(self, img_data): 
+        
+    def predict(self,image_data): 
+        data = preprocess(image_data)
+        return self.model.predict(data) 
+    
 
 
-def close_cam():
-    global cap
-    global camera_label
-    print("Cam close")
-    camera_label.config(text = "", image = None)  
-    if cap.isOpened():
-        cap.release()  
-    landmarker.close()  
-
-
+# Tkinter setup
 main = Tk()
-main.title("Yoga AI Assistant")
-main.geometry("700x700")
+main.title("Webcam Feed")
+
 
 camera_label = Label(main)
 camera_label.pack()
 
-start_button = Button(main, text="Start Camera", command=start_camera)
-start_button.pack()
-start_button = Button(main, text="End Camera", command=close_cam)
-start_button.pack()
+cam = Cam()
+cam.display_image(camera_label)
+
+capture_button = Button(main, text="Capture Frame", command= cam.capture_frame )
+capture_button.pack()
+
 
 main.mainloop()
-if 'cap' in globals():
-    cap.release()
-landmarker.close()
+
+# Release resources
+cam.cap.release()
+cv.destroyAllWindows()
