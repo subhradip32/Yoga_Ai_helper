@@ -42,7 +42,8 @@ class Model():
     def __init__(self, model_path: str):
         self.model = tf.keras.models.load_model(model_path)
     
-    def preprocess(self, img_data): 
+    def preprocess(self, img_data):
+        pass 
         
     def predict(self,image_data): 
         data = preprocess(image_data)
