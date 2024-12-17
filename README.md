@@ -1,6 +1,7 @@
 # Emotion Detection with Suggested Yoga Poses
 
 This project combines **emotion detection** using a deep learning model and suggests **yoga poses** for corresponding emotional states (Happy, Neutral, Sad). The application uses **OpenCV** for live webcam feed, **TensorFlow/Keras** for predictions, and **Tkinter** for the user interface.
+Watch this : https://youtu.be/vGgx6OPDq-4
 
 ## Table of Contents
 
